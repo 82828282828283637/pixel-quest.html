@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pixel Quest</title>
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: #fff;
+      font-family: monospace;
+      text-align: center;
+    }
+    canvas {
+      border: 4px solid #fff;
+      background-color: #222;
+      display: block;
+      margin: 20px auto;
+    }
+    #info {
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧙 Pixel Quest</h1>
+  <div id="info">Use arrow keys or WASD to move. Collect all coins and reach the glowing exit!</div>
+  <canvas id="game" width="640" height="480"></canvas>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const tileSize = 32;
+    const mapWidth = 20;
+    const mapHeight = 15;
+
+    // 0 = empty, 1 = wall, 2 = coin, 3 = exit
+    const level = [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,2,0,1],
+      [1,0,1,1,1,0,1,0,1,1,1,0,1,1,1,0,1,0,0,1],
+      [1,0,1,0,0,0,1,0,0,0,1,0,1,0,1,0,1,1,0,1],
+      [1,0,1,0,1,0,1,1,1,0,1,0,1,0,1,0,0,1,0,1],
+      [1,0,1,0,1,0,0,0,1,0,1,0,1,0,1,1,0,1,0,1],
+      [1,0,1,0,1,1,1,0,1,0,1,0,1,0,0,1,0,1,0,1],
+      [1,0,1,0,0,0,1,0,1,0,1,0,1,1,0,1,0,1,0,1],
+      [1,0,1,1,1,0,1,0,1,0,1,0,0,1,0,1,0,1,0,1],
+      [1,0,0,0,1,0,1,0,1,0,1,1,0,1,0,1,0,1,0,1],
+      [1,0,1,0,1,0,1,0,1,0,0,1,0,1,0,1,0,1,0,1],
+      [1,0,1,0,1,0,1,0,1,1,0,1,0,1,0,1,0,1,0,1],
+      [1,2,0,0,1,0,1,0,0,0,0,1,0,0,0,0,0,0,3,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    ];
+
+    const player = {
+      x: 1,
+      y: 1,
+      color: "lime",
+    };
+
+    const enemies = [
+      { x: 5, y: 5, dir: 1 },
+      { x: 10, y: 10, dir: -1 }
+    ];
+
+    let coinsCollected = 0;
+    let totalCoins = 0;
+
+    // Count coins
+    for (let row of level) {
+      for (let cell of row) {
+        if (cell === 2) totalCoins++;
+      }
+    }
+
+    function drawTile(x, y, color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let y = 0; y < level.length; y++) {
+        for (let x = 0; x < level[0].length; x++) {
+          let cell = level[y][x];
+          if (cell === 1) drawTile(x, y, "#444");
+          else if (cell === 2) drawTile(x, y, "gold");
+          else if (cell === 3) drawTile(x, y, "deepskyblue");
+        }
+      }
+
+      // Draw enemies
+      for (let enemy of enemies) {
+        drawTile(enemy.x, enemy.y, "red");
+      }
+
+      // Draw player
+      drawTile(player.x, player.y, player.color);
+
+      ctx.fillStyle = "#fff";
+      ctx.fillText(`Coins: ${coinsCollected} / ${totalCoins}`, 10, 20);
+    }
+
+    function isWalkable(x, y) {
+      return level[y][x] !== 1;
+    }
+
+    function checkCollision() {
+      for (let enemy of enemies) {
+        if (enemy.x === player.x && enemy.y === player.y) {
+          alert("💀 You were caught by an enemy!");
+          location.reload();
+        }
+      }
+    }
+
+    function updateEnemies() {
+      for (let enemy of enemies) {
+        let newY = enemy.y + enemy.dir;
+        if (newY < 1 || newY >= mapHeight - 1 || level[newY][enemy.x] === 1) {
+          enemy.dir *= -1;
+        } else {
+          enemy.y = newY;
+        }
+      }
+    }
+
+    function movePlayer(dx, dy) {
+      const newX = player.x + dx;
+      const newY = player.y + dy;
+
+      if (isWalkable(newX, newY)) {
+        player.x = newX;
+        player.y = newY;
+
+        // Collect coin
+        if (level[newY][newX] === 2) {
+          level[newY][newX] = 0;
+          coinsCollected++;
+        }
+
+        // Win
+        if (level[newY][newX] === 3 && coinsCollected === totalCoins) {
+          alert("🎉 You win! All coins collected!");
+          location.reload();
+        }
+      }
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (["ArrowUp", "w"].includes(e.key)) movePlayer(0, -1);
+      if (["ArrowDown", "s"].includes(e.key)) movePlayer(0, 1);
+      if (["ArrowLeft", "a"].includes(e.key)) movePlayer(-1, 0);
+      if (["ArrowRight", "d"].includes(e.key)) movePlayer(1, 0);
+    });
+
+    function gameLoop() {
+      updateEnemies();
+      checkCollision();
+      draw();
+    }
+
+    setInterval(gameLoop, 150);
+  </script>
+</body>
+</html>p
